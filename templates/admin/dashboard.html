@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="fw-bold mb-1">Admin Dashboard</h3>
+        <p class="text-muted mb-0">Overview of courses, examinations, examiners, students, slots, and bookings.</p>
+    </div>
+    <div class="btn-group">
+        <a href="{{ url_for('admin.add_examination') }}" class="btn btn-primary btn-sm">New Examination</a>
+        <a href="{{ url_for('admin.add_course') }}" class="btn btn-outline-dark btn-sm">New Course</a>
+        <a href="{{ url_for('admin.add_examiner') }}" class="btn btn-outline-dark btn-sm">Add Examiner</a>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-2 col-sm-4 col-6">
+        <div class="card text-center py-3 shadow-sm">
+            <h6 class="text-muted small text-uppercase mb-1">Courses</h6>
+            <h3 class="fw-bold mb-0">{{ total_courses }}</h3>
+            <a href="{{ url_for('admin.manage_courses') }}" class="stretched-link"></a>
+        </div>
+    </div>
+    <div class="col-md-2 col-sm-4 col-6">
+        <div class="card text-center py-3 shadow-sm">
+            <h6 class="text-muted small text-uppercase mb-1">Examinations</h6>
+            <h3 class="fw-bold mb-0">{{ total_exams }}</h3>
+            <a href="{{ url_for('admin.manage_examinations') }}" class="stretched-link"></a>
+        </div>
+    </div>
+    <div class="col-md-2 col-sm-4 col-6">
+        <div class="card text-center py-3 shadow-sm">
+            <h6 class="text-muted small text-uppercase mb-1">Examiners</h6>
+            <h3 class="fw-bold mb-0">{{ total_examiners }}</h3>
+            {% if pending_approvals > 0 %}
+                <span class="badge bg-warning text-dark mt-1">{{ pending_approvals }} Pending</span>
+            {% endif %}
+            <a href="{{ url_for('admin.manage_users', role='examiner') }}" class="stretched-link"></a>
+        </div>
+    </div>
+    <div class="col-md-2 col-sm-4 col-6">
+        <div class="card text-center py-3 shadow-sm">
+            <h6 class="text-muted small text-uppercase mb-1">Students</h6>
+            <h3 class="fw-bold mb-0">{{ total_students }}</h3>
+            <a href="{{ url_for('admin.manage_users', role='student') }}" class="stretched-link"></a>
+        </div>
+    </div>
+    <div class="col-md-2 col-sm-4 col-6">
+        <div class="card text-center py-3 shadow-sm">
+            <h6 class="text-muted small text-uppercase mb-1">Exam Slots</h6>
+            <h3 class="fw-bold mb-0">{{ total_slots }}</h3>
+            <a href="{{ url_for('admin.manage_slots') }}" class="stretched-link"></a>
+        </div>
+    </div>
+    <div class="col-md-2 col-sm-4 col-6">
+        <div class="card text-center py-3 shadow-sm">
+            <h6 class="text-muted small text-uppercase mb-1">Bookings</h6>
+            <h3 class="fw-bold mb-0">{{ total_bookings }}</h3>
+            <a href="{{ url_for('admin.manage_bookings') }}" class="stretched-link"></a>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <span class="fw-bold">Recent Examinations</span>
+                <a href="{{ url_for('admin.manage_examinations') }}" class="btn btn-sm btn-link text-decoration-none">View All</a>
+            </div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush">
+                    {% for examination in recent_exams %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center py-3">
+                        <div>
+                            <div class="fw-semibold">{{ examination.title }}</div>
+                            <small class="text-muted">{{ examination.course.course_code }} | Total Marks: {{ examination.total_marks }}</small>
+                        </div>
+                        <span class="badge bg-secondary">{{ examination.status }}</span>
+                    </li>
+                    {% else %}
+                    <li class="list-group-item text-center text-muted py-3">No examinations created yet.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <span class="fw-bold">Recent Bookings</span>
+                <a href="{{ url_for('admin.manage_bookings') }}" class="btn btn-sm btn-link text-decoration-none">View All</a>
+            </div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush">
+                    {% for booking in recent_bookings %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center py-3">
+                        <div>
+                            <div class="fw-semibold">{{ booking.student.full_name }}</div>
+                            <small class="text-muted">{{ booking.slot.examination.title }} | {{ booking.slot.slot_date }}</small>
+                        </div>
+                        <span class="badge bg-primary">{{ booking.status }}</span>
+                    </li>
+                    {% else %}
+                    <li class="list-group-item text-center text-muted py-3">No bookings recorded yet.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

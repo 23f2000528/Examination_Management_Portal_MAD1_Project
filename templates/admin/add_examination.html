@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% block title %}Create Examination{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-9">
+        <div class="card shadow-sm border-0 mt-3">
+            <div class="card-header bg-dark text-white py-3">
+                <h5 class="mb-0">Create New Examination</h5>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-8">
+                            <label class="form-label fw-semibold">Examination Title</label>
+                            <input type="text" name="title" class="form-control" placeholder="e.g. MAD-I Project Viva & Evaluation" required autofocus>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Course</label>
+                            <select name="course_id" class="form-select" required>
+                                {% for course in courses %}
+                                    <option value="{{ course.id }}">{{ course.course_code }} - {{ course.course_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Total Examination Marks</label>
+                            <input type="number" name="total_marks" class="form-control" value="100" min="1" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Initial Status</label>
+                            <select name="status" class="form-select">
+                                <option value="Draft" selected>Draft</option>
+                                <option value="Slot Creation">Slot Creation</option>
+                                <option value="Booking Open">Booking Open</option>
+                                <option value="Closed">Closed</option>
+                                <option value="Completed">Completed</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Description</label>
+                        <textarea name="description" class="form-control" rows="3" placeholder="Candidate instructions, oral evaluation syllabus..."></textarea>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Examiner Slot Creation Starts</label>
+                            <input type="datetime-local" name="slot_creation_start" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Examiner Slot Creation Ends</label>
+                            <input type="datetime-local" name="slot_creation_end" class="form-control">
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Student Booking Opens</label>
+                            <input type="datetime-local" name="booking_start" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Student Booking Closes</label>
+                            <input type="datetime-local" name="booking_end" class="form-control">
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Exam Date</label>
+                        <input type="datetime-local" name="exam_date" class="form-control">
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('admin.manage_examinations') }}" class="btn btn-outline-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary px-4">Save & Configure Rubrics</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

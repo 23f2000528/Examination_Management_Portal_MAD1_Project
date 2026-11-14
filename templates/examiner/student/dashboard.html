@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% block title %}Student Dashboard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="fw-bold mb-1">Student Dashboard</h3>
+        <p class="text-muted mb-0">Welcome, <strong>{{ session.user_name }}</strong>. Review your examination bookings, schedules, and evaluation results.</p>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-dark text-white fw-bold">
+        My Examination Bookings
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>#</th>
+                    <th>Course & Examination</th>
+                    <th>Assigned Examiner</th>
+                    <th>Date & Timing</th>
+                    <th>Booking Status</th>
+                    <th>Marks & Feedback</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for booking in my_bookings %}
+                <tr>
+                    <td class="text-muted">{{ loop.index }}</td>
+                    <td>
+                        <div class="fw-semibold">{{ booking.slot.examination.title }}</div>
+                        <span class="badge bg-secondary font-monospace">{{ booking.slot.examination.course.course_code }}</span>
+                    </td>
+                    <td>{{ booking.slot.examiner.full_name }}</td>
+                    <td>
+                        <div>{{ booking.slot.slot_date.strftime('%d %b %Y') }}</div>
+                        <small class="text-muted">{{ booking.slot.start_time.strftime('%H:%M') }} – {{ booking.slot.end_time.strftime('%H:%M') }}</small>
+                    </td>
+                    <td>
+                        <span class="badge {% if booking.status == 'Booked' %}bg-primary{% elif booking.status == 'Completed' %}bg-success{% else %}bg-secondary{% endif %}">
+                            {{ booking.status }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if booking.status == 'Completed' and booking.total_marks_obtained is not none %}
+                            <div class="fw-bold text-success">{{ booking.total_marks_obtained }} / {{ booking.slot.examination.total_marks }}</div>
+                            <small class="text-muted">{{ booking.remarks or 'No qualitative feedback provided.' }}</small>
+                        {% else %}
+                            <span class="text-muted small">Pending Evaluation</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="text-center py-4 text-muted">You have no active or past examination bookings.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

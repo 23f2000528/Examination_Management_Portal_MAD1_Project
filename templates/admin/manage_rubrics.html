@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+{% block title %}Manage Rubrics — {{ exam.title }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h3 class="fw-bold mb-0">Examination Rubrics</h3>
+        <p class="text-muted small mb-0">{{ exam.title }} ({{ exam.course.course_code }}) | Total Marks: {{ exam.total_marks }}</p>
+    </div>
+    <a href="{{ url_for('admin.manage_examinations') }}" class="btn btn-outline-secondary btn-sm">Back to Exams</a>
+</div>
+
+<div class="alert {% if current_total == exam.total_marks %}alert-success{% elif current_total < exam.total_marks %}alert-warning{% else %}alert-danger{% endif %} d-flex justify-content-between align-items-center py-2">
+    <div>
+        Configured Rubrics Total: <strong>{{ current_total }} / {{ exam.total_marks }} marks</strong>
+    </div>
+    {% if current_total != exam.total_marks %}
+        <span class="small">{% if current_total < exam.total_marks %}{{ exam.total_marks - current_total }} marks remaining to allocate{% else %}{{ current_total - exam.total_marks }} marks over limit{% endif %}</span>
+    {% else %}
+        <span class="badge bg-success">Rubrics Balanced</span>
+    {% endif %}
+</div>
+
+<div class="row g-4">
+    <div class="col-md-5">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-dark text-white py-2">
+                <h6 class="mb-0">Add Rubric Criterion</h6>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Criterion Name</label>
+                        <input type="text" name="criterion_name" class="form-control" placeholder="e.g. Code Architecture & Models" required autofocus>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Maximum Marks</label>
+                        <input type="number" name="max_marks" class="form-control" placeholder="e.g. 30" min="1" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Criterion Description</label>
+                        <textarea name="description" class="form-control" rows="3" placeholder="What the examiner should assess for this criterion..."></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100">Add Rubric Item</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-7">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-light py-2 fw-bold">
+                Configured Criteria ({{ exam.rubrics | length }})
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Criterion Name</th>
+                            <th class="text-center">Weightage</th>
+                            <th class="text-end">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for rubric in exam.rubrics %}
+                        <tr>
+                            <td class="text-muted">{{ loop.index }}</td>
+                            <td>
+                                <div class="fw-semibold">{{ rubric.criterion_name }}</div>
+                                <small class="text-muted">{{ rubric.description or 'No extra description.' }}</small>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-primary fs-6">{{ rubric.max_marks }}</span>
+                            </td>
+                            <td class="text-end">
+                                <form method="POST" action="{{ url_for('admin.delete_rubric', rubric_id=rubric.id) }}" onsubmit="return confirm('Are you sure you want to remove this rubric item?');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center py-4 text-muted">No rubrics defined yet. Add criteria using the form on the left.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

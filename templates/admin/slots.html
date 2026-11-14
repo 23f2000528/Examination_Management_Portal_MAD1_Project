@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+{% block title %}Manage Examination Slots{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h3 class="fw-bold mb-0">Examination Slots</h3>
+        <p class="text-muted small mb-0">View all examination slots, monitor capacity, and reassign examiners in exceptional situations.</p>
+    </div>
+</div>
+
+<div class="card mb-4 shadow-sm border-0 bg-light">
+    <div class="card-body py-2">
+        <form method="GET" action="{{ url_for('admin.manage_slots') }}" class="row g-2 align-items-center">
+            <div class="col-md-5">
+                <select name="exam_id" class="form-select">
+                    <option value="">All Examinations</option>
+                    {% for examination in examinations %}
+                        <option value="{{ examination.id }}" {% if selected_exam_id == examination.id %}selected{% endif %}>
+                            {{ examination.title }} ({{ examination.course.course_code }})
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-5">
+                <select name="examiner_id" class="form-select">
+                    <option value="">All Examiners</option>
+                    {% for examiner in examiners %}
+                        <option value="{{ examiner.id }}" {% if selected_examiner_id == examiner.id %}selected{% endif %}>
+                            {{ examiner.full_name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-dark w-100">Filter</button>
+                {% if selected_exam_id or selected_examiner_id %}
+                    <a href="{{ url_for('admin.manage_slots') }}" class="btn btn-outline-secondary">Reset</a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th>#</th>
+                    <th>Examination</th>
+                    <th>Date & Timing</th>
+                    <th>Assigned Examiner</th>
+                    <th class="text-center">Capacity & Booked</th>
+                    <th>Status</th>
+                    <th class="text-end">Reassign Examiner</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for slot in slots %}
+                <tr>
+                    <td class="text-muted">{{ loop.index }}</td>
+                    <td>
+                        <div class="fw-bold">{{ slot.examination.title }}</div>
+                        <span class="badge bg-secondary font-monospace">{{ slot.examination.course.course_code }}</span>
+                    </td>
+                    <td>
+                        <div class="fw-semibold">{{ slot.slot_date.strftime('%d %B %Y') }}</div>
+                        <small class="text-muted">{{ slot.start_time.strftime('%H:%M') }} – {{ slot.end_time.strftime('%H:%M') }}</small>
+                    </td>
+                    <td>
+                        <div class="fw-semibold text-dark">{{ slot.examiner.full_name }}</div>
+                        <small class="text-muted">{{ slot.examiner.email }}</small>
+                    </td>
+                    <td class="text-center">
+                        <span class="badge {% if slot.booked_count() >= slot.capacity %}bg-danger{% else %}bg-primary{% endif %} fs-6">
+                            {{ slot.booked_count() }} / {{ slot.capacity }}
+                        </span>
+                        <div class="small text-muted">{{ slot.capacity - slot.booked_count() }} seats free</div>
+                    </td>
+                    <td>
+                        {% if slot.is_closed or slot.booked_count() >= slot.capacity %}
+                            <span class="badge bg-secondary">Closed / Full</span>
+                        {% else %}
+                            <span class="badge bg-success">Open</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">
+                        <form method="POST" action="{{ url_for('admin.change_slot_examiner', slot_id=slot.id) }}" class="d-flex gap-1 justify-content-end align-items-center">
+                            <select name="new_examiner_id" class="form-select form-select-sm" style="max-width: 170px;" required>
+                                {% for examiner_option in examiners %}
+                                    <option value="{{ examiner_option.id }}" {% if examiner_option.id == slot.examiner_id %}selected disabled{% endif %}>
+                                        {{ examiner_option.full_name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <button type="submit" class="btn btn-sm btn-outline-warning text-dark" onclick="return confirm('Reassign examiner for this slot?');">
+                                Change
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" class="text-center py-4 text-muted">No examination slots found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

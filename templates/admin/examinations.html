@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+{% block title %}Manage Examinations{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h3 class="fw-bold mb-0">Examinations Management</h3>
+        <p class="text-muted small mb-0">Configure status transitions, timeline windows, and rubrics.</p>
+    </div>
+    <a href="{{ url_for('admin.add_examination') }}" class="btn btn-primary btn-sm">Create Examination</a>
+</div>
+
+<div class="card mb-4 shadow-sm border-0 bg-light">
+    <div class="card-body py-2">
+        <form method="GET" action="{{ url_for('admin.manage_examinations') }}" class="row g-2 align-items-center">
+            <div class="col-md-6">
+                <input type="text" name="q" class="form-control" placeholder="Search examination title..." value="{{ search_query or '' }}">
+            </div>
+            <div class="col-md-3">
+                <select name="status" class="form-select">
+                    <option value="">All Statuses</option>
+                    {% for status_option in ['Draft', 'Slot Creation', 'Booking Open', 'Closed', 'Completed'] %}
+                        <option value="{{ status_option }}" {% if status_filter == status_option %}selected{% endif %}>{{ status_option }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-dark w-100">Filter</button>
+                {% if search_query or status_filter %}
+                    <a href="{{ url_for('admin.manage_examinations') }}" class="btn btn-outline-secondary">Reset</a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th>#</th>
+                    <th>Exam Details</th>
+                    <th>Current Status</th>
+                    <th>Timelines</th>
+                    <th class="text-center">Rubrics</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for examination in examinations %}
+                <tr>
+                    <td class="text-muted">{{ loop.index }}</td>
+                    <td>
+                        <div class="fw-bold">{{ examination.title }}</div>
+                        <span class="badge bg-secondary font-monospace">{{ examination.course.course_code }}</span>
+                        <small class="text-muted ms-1">{{ examination.course.course_name }}</small>
+                        <div class="small text-muted mt-1">Total Marks: {{ examination.total_marks }}</div>
+                    </td>
+                    <td>
+                        <div class="mb-2">
+                            <span class="badge {% if examination.status == 'Booking Open' %}bg-success{% elif examination.status == 'Slot Creation' %}bg-warning text-dark{% elif examination.status == 'Draft' %}bg-secondary{% elif examination.status == 'Completed' %}bg-info text-dark{% else %}bg-danger{% endif %} fs-6">
+                                {{ examination.status }}
+                            </span>
+                        </div>
+                        <form method="POST" action="{{ url_for('admin.update_examination_status', exam_id=examination.id) }}" class="d-flex gap-1 align-items-center">
+                            <select name="status" class="form-select form-select-sm" style="width: 140px;">
+                                {% for status_option in ['Draft', 'Slot Creation', 'Booking Open', 'Closed', 'Completed'] %}
+                                    <option value="{{ status_option }}" {% if examination.status == status_option %}selected{% endif %}>{{ status_option }}</option>
+                                {% endfor %}
+                            </select>
+                            <button type="submit" class="btn btn-sm btn-outline-dark">Update</button>
+                        </form>
+                    </td>
+                    <td class="small">
+                        <div><strong>Slot Creation:</strong> {{ examination.slot_creation_start.strftime('%d %b, %H:%M') if examination.slot_creation_start else 'Not set' }} to {{ examination.slot_creation_end.strftime('%d %b, %H:%M') if examination.slot_creation_end else 'Not set' }}</div>
+                        <div><strong>Student Booking:</strong> {{ examination.booking_start.strftime('%d %b, %H:%M') if examination.booking_start else 'Not set' }} to {{ examination.booking_end.strftime('%d %b, %H:%M') if examination.booking_end else 'Not set' }}</div>
+                        <div><strong>Exam Date:</strong> {{ examination.exam_date.strftime('%d %b %Y, %H:%M') if examination.exam_date else 'Not set' }}</div>
+                    </td>
+                    <td class="text-center">
+                        <a href="{{ url_for('admin.manage_rubrics', exam_id=examination.id) }}" class="btn btn-sm btn-outline-info text-dark">
+                            {{ examination.rubrics | length }} Rubrics
+                        </a>
+                    </td>
+                    <td class="text-end">
+                        <a href="{{ url_for('admin.edit_examination', exam_id=examination.id) }}" class="btn btn-sm btn-outline-primary me-1">Edit</a>
+                        <form method="POST" action="{{ url_for('admin.delete_examination', exam_id=examination.id) }}" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this examination?');">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="text-center py-4 text-muted">No examinations found matching your criteria.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
