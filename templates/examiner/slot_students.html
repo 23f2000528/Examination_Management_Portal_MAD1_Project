@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% block title %}Booked Candidates{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="mb-0">Candidates Booked for Slot</h4>
+        <p class="text-muted small mb-0">{{ slot.examination.title }} | {{ slot.slot_date.strftime('%d %B %Y') }} ({{ slot.start_time.strftime('%H:%M') }} - {{ slot.end_time.strftime('%H:%M') }})</p>
+    </div>
+    <a href="{{ url_for('examiner.dashboard') }}" class="btn btn-secondary btn-sm">Back to Dashboard</a>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th>#</th>
+                    <th>Student Name</th>
+                    <th>Email</th>
+                    <th>Booking Time</th>
+                    <th>Status</th>
+                    <th>Marks</th>
+                    <th class="text-end">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for booking in bookings %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>
+                        <strong>{{ booking.student.full_name }}</strong>
+                        <div class="small text-muted">@{{ booking.student.username }}</div>
+                    </td>
+                    <td>{{ booking.student.email }}</td>
+                    <td>{{ booking.booked_at.strftime('%d %b %Y, %H:%M') }}</td>
+                    <td>
+                        {% if booking.status == 'Completed' %}
+                            <span class="badge bg-success">Evaluated</span>
+                        {% else %}
+                            <span class="badge bg-warning text-dark">Pending</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if booking.status == 'Completed' and booking.total_marks_obtained is not none %}
+                            <strong>{{ booking.total_marks_obtained }} / {{ slot.examination.total_marks }}</strong>
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                    <td class="text-end">
+                        {% if booking.status == 'Completed' %}
+                            <a href="{{ url_for('examiner.evaluate_student', booking_id=booking.id) }}" class="btn btn-sm btn-outline-primary">Re-evaluate</a>
+                        {% else %}
+                            <a href="{{ url_for('examiner.evaluate_student', booking_id=booking.id) }}" class="btn btn-sm btn-success">Evaluate</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" class="text-center py-4 text-muted">No students have booked this slot yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

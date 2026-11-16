@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% block title %}Evaluate Candidate{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card mt-2 mb-4">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Candidate Viva Evaluation</h5>
+                <span>{{ booking.slot.examination.course.course_code }}</span>
+            </div>
+            <div class="card-body">
+                <div class="bg-light p-3 rounded mb-4 border d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-1">{{ booking.student.full_name }}</h5>
+                        <div class="small text-muted">@{{ booking.student.username }} | {{ booking.student.email }}</div>
+                    </div>
+                    <div class="text-end">
+                        <div class="small text-muted">Total Exam Marks</div>
+                        <h4>{{ booking.slot.examination.total_marks }}</h4>
+                    </div>
+                </div>
+
+                <form method="POST">
+                    <h6 class="mb-3">Evaluation Rubrics</h6>
+
+                    {% for rubric in rubrics %}
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-md-8">
+                                    <h6 class="mb-1">{{ loop.index }}. {{ rubric.criterion_name }}</h6>
+                                    <div class="small text-muted">{{ rubric.description or '' }}</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="input-group">
+                                        <input type="number" name="rubric_{{ rubric.id }}" class="form-control"
+                                               min="0" max="{{ rubric.max_marks }}"
+                                               value="{{ existing_scores.get(rubric.id, '') }}"
+                                               placeholder="0 - {{ rubric.max_marks }}" required>
+                                        <span class="input-group-text">/ {{ rubric.max_marks }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning">
+                        No rubrics defined for this examination. Please contact admin.
+                    </div>
+                    {% endfor %}
+
+                    <div class="mb-4">
+                        <label class="form-label">Feedback Remarks</label>
+                        <textarea name="remarks" class="form-control" rows="3" placeholder="Provide feedback for the student">{{ booking.remarks or '' }}</textarea>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('examiner.view_slot_students', slot_id=booking.slot_id) }}" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-success">Save Evaluation</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
