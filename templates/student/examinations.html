@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% block title %}Available Examinations{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h3 class="fw-bold mb-0">Available Examinations</h3>
+        <p class="text-muted small mb-0">Browse and search examinations currently accepting student viva slot bookings.</p>
+    </div>
+    <a href="{{ url_for('student.dashboard') }}" class="btn btn-outline-secondary btn-sm">My Dashboard</a>
+</div>
+
+<div class="card mb-4 shadow-sm border-0 bg-light">
+    <div class="card-body py-2">
+        <form method="GET" action="{{ url_for('student.view_examinations') }}" class="row g-2 align-items-center">
+            <div class="col-md-6">
+                <input type="text" name="q" class="form-control" placeholder="Search examination title..." value="{{ search_query or '' }}">
+            </div>
+            <div class="col-md-4">
+                <select name="course_id" class="form-select">
+                    <option value="">All Courses</option>
+                    {% for course in courses %}
+                        <option value="{{ course.id }}" {% if selected_course_id == course.id %}selected{% endif %}>
+                            {{ course.course_code }} - {{ course.course_name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-primary w-100">Filter</button>
+                {% if search_query or selected_course_id %}
+                    <a href="{{ url_for('student.view_examinations') }}" class="btn btn-outline-secondary">Reset</a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row g-4">
+    {% for examination in examinations %}
+    <div class="col-md-6">
+        <div class="card h-100 shadow-sm border-0">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-2">
+                <span class="badge bg-secondary font-monospace">{{ examination.course.course_code }}</span>
+                <span class="badge {% if examination.status == 'Booking Open' %}bg-success{% else %}bg-warning text-dark{% endif %}">
+                    {{ examination.status }}
+                </span>
+            </div>
+            <div class="card-body">
+                <h5 class="fw-bold mb-1">{{ examination.title }}</h5>
+                <p class="text-muted small mb-3">{{ examination.course.course_name }}</p>
+                <p class="small">{{ examination.description or 'Viva examination covering foundational theory, design models, and implementation walkthrough.' }}</p>
+
+                <div class="bg-light p-2 rounded small mb-3">
+                    <div><strong>Total Marks:</strong> {{ examination.total_marks }}</div>
+                    <div><strong>Booking Closes:</strong> {{ examination.booking_end.strftime('%d %b %Y, %H:%M') if examination.booking_end else 'Open' }}</div>
+                    <div><strong>Total Available Slots:</strong> {{ examination.slots | length }}</div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                    <span class="text-muted small">{{ examination.rubrics | length }} Evaluation Criteria</span>
+                    <a href="{{ url_for('student.view_slots', exam_id=examination.id) }}" class="btn btn-outline-primary btn-sm">
+                        View Slots & Book
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12">
+        <div class="card text-center py-5 shadow-sm border-0">
+            <h5 class="text-muted">No examinations currently open for booking.</h5>
+            <p class="small text-muted">Please check back once the course administrator opens booking windows.</p>
+            <a href="{{ url_for('student.dashboard') }}" class="btn btn-outline-secondary btn-sm mx-auto" style="width: 150px;">Return Home</a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

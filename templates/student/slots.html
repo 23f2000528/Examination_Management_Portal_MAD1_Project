@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+{% block title %}Available Slots — {{ examination.title }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h3 class="fw-bold mb-0">Examination Slots</h3>
+        <p class="text-muted small mb-0">{{ examination.title }} ({{ examination.course.course_code }}) | Status: <strong>{{ examination.status }}</strong></p>
+    </div>
+    <a href="{{ url_for('student.view_examinations') }}" class="btn btn-outline-secondary btn-sm">Back to Examinations</a>
+</div>
+
+{% if existing_booking %}
+<div class="alert alert-info py-3 mb-4 d-flex justify-content-between align-items-center">
+    <div>
+        <strong>You have an active booking for this examination:</strong>
+        <div>Slot Date: {{ existing_booking.slot.slot_date.strftime('%d %B %Y') }} ({{ existing_booking.slot.start_time.strftime('%H:%M') }} - {{ existing_booking.slot.end_time.strftime('%H:%M') }}) with Examiner: {{ existing_booking.slot.examiner.full_name }}</div>
+    </div>
+    <form method="POST" action="{{ url_for('student.cancel_booking', booking_id=existing_booking.id) }}" onsubmit="return confirm('Cancel this booking to choose another slot?');">
+        <button type="submit" class="btn btn-sm btn-outline-danger">Cancel This Slot</button>
+    </form>
+</div>
+{% endif %}
+
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-dark text-white fw-bold py-3">
+        Available Viva Interview Time Slots
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>#</th>
+                    <th>Date & Timing</th>
+                    <th>Assigned Examiner</th>
+                    <th class="text-center">Seat Availability</th>
+                    <th>Status</th>
+                    <th class="text-end">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for slot in examination.slots %}
+                <tr>
+                    <td class="text-muted">{{ loop.index }}</td>
+                    <td>
+                        <div class="fw-bold">{{ slot.slot_date.strftime('%d %B %Y') }}</div>
+                        <small class="text-muted">{{ slot.start_time.strftime('%H:%M') }} – {{ slot.end_time.strftime('%H:%M') }}</small>
+                    </td>
+                    <td>
+                        <div class="fw-semibold">{{ slot.examiner.full_name }}</div>
+                        <small class="text-muted">{{ slot.examiner.email }}</small>
+                    </td>
+                    <td class="text-center">
+                        <span class="badge {% if slot.booked_count() >= slot.capacity %}bg-danger{% else %}bg-primary{% endif %} fs-6">
+                            {{ slot.booked_count() }} / {{ slot.capacity }} booked
+                        </span>
+                        <div class="small text-muted">{{ slot.capacity - slot.booked_count() }} seats remaining</div>
+                    </td>
+                    <td>
+                        {% if slot.is_closed or slot.booked_count() >= slot.capacity %}
+                            <span class="badge bg-secondary">Full / Closed</span>
+                        {% else %}
+                            <span class="badge bg-success">Available</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">
+                        {% if existing_booking %}
+                            {% if existing_booking.slot_id == slot.id %}
+                                <span class="badge bg-primary">Your Booked Slot</span>
+                            {% else %}
+                                <button class="btn btn-sm btn-secondary" disabled>Already Booked</button>
+                            {% endif %}
+                        {% else %}
+                            {% if slot.is_available() and examination.status == 'Booking Open' %}
+                                <form method="POST" action="{{ url_for('student.book_slot', slot_id=slot.id) }}" onsubmit="return confirm('Confirm booking for {{ slot.slot_date.strftime('%d %b') }} ({{ slot.start_time.strftime('%H:%M') }})?');">
+                                    <button type="submit" class="btn btn-sm btn-success">Book This Slot</button>
+                                </form>
+                            {% else %}
+                                <button class="btn btn-sm btn-secondary" disabled>Unavailable</button>
+                            {% endif %}
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="text-center py-4 text-muted">No examination slots created yet by the assigned examiners.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

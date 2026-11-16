@@ -4,14 +4,19 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h3 class="fw-bold mb-1">Student Dashboard</h3>
-        <p class="text-muted mb-0">Welcome, <strong>{{ session.user_name }}</strong>. Review your examination bookings, schedules, and evaluation results.</p>
+        <h3 class="fw-bold mb-1">Student Portal</h3>
+        <p class="text-muted mb-0">Welcome, <strong>{{ student.full_name }}</strong>. View your upcoming viva sessions, book new slots, and review evaluation results.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('student.profile') }}" class="btn btn-outline-dark btn-sm">My Profile</a>
+        <a href="{{ url_for('student.view_examinations') }}" class="btn btn-primary btn-sm">Browse Available Exams</a>
     </div>
 </div>
 
 <div class="card shadow-sm border-0 mb-4">
-    <div class="card-header bg-dark text-white fw-bold">
-        My Examination Bookings
+    <div class="card-header bg-dark text-white fw-bold py-3 d-flex justify-content-between align-items-center">
+        <span>Upcoming Examination Bookings ({{ upcoming_bookings | length }})</span>
+        <a href="{{ url_for('student.view_examinations') }}" class="btn btn-sm btn-light">Book New Exam</a>
     </div>
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
@@ -20,13 +25,64 @@
                     <th>#</th>
                     <th>Course & Examination</th>
                     <th>Assigned Examiner</th>
-                    <th>Date & Timing</th>
-                    <th>Booking Status</th>
-                    <th>Marks & Feedback</th>
+                    <th>Scheduled Date & Time</th>
+                    <th>Status</th>
+                    <th class="text-end">Action</th>
                 </tr>
             </thead>
             <tbody>
-                {% for booking in my_bookings %}
+                {% for booking in upcoming_bookings %}
+                <tr>
+                    <td class="text-muted">{{ loop.index }}</td>
+                    <td>
+                        <div class="fw-bold">{{ booking.slot.examination.title }}</div>
+                        <span class="badge bg-secondary font-monospace">{{ booking.slot.examination.course.course_code }}</span>
+                    </td>
+                    <td>{{ booking.slot.examiner.full_name }}</td>
+                    <td>
+                        <div><strong>{{ booking.slot.slot_date.strftime('%d %B %Y') }}</strong></div>
+                        <small class="text-muted">{{ booking.slot.start_time.strftime('%H:%M') }} – {{ booking.slot.end_time.strftime('%H:%M') }}</small>
+                    </td>
+                    <td>
+                        <span class="badge bg-primary">Confirmed</span>
+                    </td>
+                    <td class="text-end">
+                        <form method="POST" action="{{ url_for('student.cancel_booking', booking_id=booking.id) }}" class="d-inline" onsubmit="return confirm('Are you sure you want to cancel this booking?');">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Cancel Booking</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="text-center py-4 text-muted">
+                        You have no upcoming viva bookings. Click "Browse Available Exams" to book an open slot.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-white fw-bold py-3">
+        Examination History & Published Results ({{ past_bookings | length }})
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>#</th>
+                    <th>Course & Examination</th>
+                    <th>Examiner</th>
+                    <th>Date</th>
+                    <th>Booking Status</th>
+                    <th>Total Score</th>
+                    <th class="text-end">Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for booking in past_bookings %}
                 <tr>
                     <td class="text-muted">{{ loop.index }}</td>
                     <td>
@@ -34,27 +90,32 @@
                         <span class="badge bg-secondary font-monospace">{{ booking.slot.examination.course.course_code }}</span>
                     </td>
                     <td>{{ booking.slot.examiner.full_name }}</td>
+                    <td>{{ booking.slot.slot_date.strftime('%d %b %Y') }}</td>
                     <td>
-                        <div>{{ booking.slot.slot_date.strftime('%d %b %Y') }}</div>
-                        <small class="text-muted">{{ booking.slot.start_time.strftime('%H:%M') }} – {{ booking.slot.end_time.strftime('%H:%M') }}</small>
-                    </td>
-                    <td>
-                        <span class="badge {% if booking.status == 'Booked' %}bg-primary{% elif booking.status == 'Completed' %}bg-success{% else %}bg-secondary{% endif %}">
+                        <span class="badge {% if booking.status == 'Completed' %}bg-success{% else %}bg-secondary{% endif %}">
                             {{ booking.status }}
                         </span>
                     </td>
                     <td>
                         {% if booking.status == 'Completed' and booking.total_marks_obtained is not none %}
-                            <div class="fw-bold text-success">{{ booking.total_marks_obtained }} / {{ booking.slot.examination.total_marks }}</div>
-                            <small class="text-muted">{{ booking.remarks or 'No qualitative feedback provided.' }}</small>
+                            <strong class="text-success">{{ booking.total_marks_obtained }} / {{ booking.slot.examination.total_marks }}</strong>
+                        {% elif booking.status == 'Cancelled' %}
+                            <span class="text-muted">Cancelled</span>
                         {% else %}
-                            <span class="text-muted small">Pending Evaluation</span>
+                            <span class="text-muted">Awaiting evaluation</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">
+                        {% if booking.status == 'Completed' %}
+                            <a href="{{ url_for('student.view_result', booking_id=booking.id) }}" class="btn btn-sm btn-outline-success">View Scorecard</a>
+                        {% else %}
+                            <span class="text-muted small">—</span>
                         {% endif %}
                     </td>
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="6" class="text-center py-4 text-muted">You have no active or past examination bookings.</td>
+                    <td colspan="7" class="text-center py-3 text-muted">No past examination records found.</td>
                 </tr>
                 {% endfor %}
             </tbody>
