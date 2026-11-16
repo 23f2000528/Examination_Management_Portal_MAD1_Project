@@ -1,0 +1,47 @@
+
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background-color: #f8f9fa; 
+}
+
+main {
+    flex: 1;
+}
+
+.card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-3px);
+}
+
+.btn-exam {
+    background-color: #4e73df;
+    color: white;
+    border: none;
+}
+
+.btn-exam:hover {
+    background-color: #3a5bbf;
+    color: white;
+}
+
+.alert {
+    border-radius: 8px;
+}
+
+.navbar-brand {
+    font-weight: 700;
+    font-size: 1.3rem;
+}
+
+footer {
+    margin-top: auto;
+}
+

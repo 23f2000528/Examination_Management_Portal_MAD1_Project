@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% block title %}Evaluation History{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h3 class="fw-bold mb-0">Viva Evaluation History</h3>
+        <p class="text-muted small mb-0">Record of all students evaluated by you across all examination slots.</p>
+    </div>
+    <a href="{{ url_for('examiner.dashboard') }}" class="btn btn-secondary btn-sm">Back to Dashboard</a>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th>#</th>
+                    <th>Student Name</th>
+                    <th>Examination & Course</th>
+                    <th>Slot Date & Time</th>
+                    <th>Marks Awarded</th>
+                    <th>Qualitative Remarks</th>
+                    <th class="text-end">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for booking in bookings %}
+                <tr>
+                    <td class="text-muted">{{ loop.index }}</td>
+                    <td>
+                        <div class="fw-bold">{{ booking.student.full_name }}</div>
+                        <small class="text-muted">@{{ booking.student.username }} | {{ booking.student.email }}</small>
+                    </td>
+                    <td>
+                        <div class="fw-semibold">{{ booking.slot.examination.title }}</div>
+                        <span class="badge bg-secondary font-monospace">{{ booking.slot.examination.course.course_code }}</span>
+                    </td>
+                    <td>
+                        <div><strong>{{ booking.slot.slot_date.strftime('%d %B %Y') }}</strong></div>
+                        <small class="text-muted">{{ booking.slot.start_time.strftime('%H:%M') }} - {{ booking.slot.end_time.strftime('%H:%M') }}</small>
+                    </td>
+                    <td>
+                        <span class="badge bg-success fs-6">
+                            {{ booking.total_marks_obtained }} / {{ booking.slot.examination.total_marks }}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="small text-muted" style="max-width: 250px;">
+                            {{ booking.remarks or 'No remarks provided' }}
+                        </div>
+                    </td>
+                    <td class="text-end">
+                        <a href="{{ url_for('examiner.evaluate_student', booking_id=booking.id) }}" class="btn btn-sm btn-outline-primary">
+                            Review / Edit
+                        </a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" class="text-center py-4 text-muted">
+                        No completed viva evaluations yet. Once you evaluate students from your slots, they will appear here.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

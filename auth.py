@@ -56,7 +56,7 @@ def register():
         confirm    = request.form.get('confirm_password', '')
         role       = request.form.get('role', 'student')   # 'student' or 'examiner'
 #Validation Check
-         if not all([full_name, username, email, password]):
+        if not all([full_name, username, email, password]):
             flash('All fields are required.', 'danger')
             return render_template('auth/register.html')
 
@@ -71,7 +71,6 @@ def register():
         if role not in ('student', 'examiner'):
             flash('Invalid role selected.', 'danger')
             return render_template('auth/register.html')
-
 #Unique Check
         if User.query.filter_by(username=username).first():
             flash('Username already taken. Try another.', 'danger')

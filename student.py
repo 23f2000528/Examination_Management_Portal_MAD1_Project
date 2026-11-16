@@ -208,3 +208,30 @@ def view_result(booking_id):
         return redirect(url_for('student.dashboard'))
 
     return render_template('student/result.html', booking=booking)
+
+
+@student_bp.route('/history')
+@role_required('student')
+def booking_history():
+    student_id = session['user_id']
+    student = User.query.get(student_id)
+
+    status_filter = request.args.get('status', '').strip()
+
+    all_bookings = Booking.query.filter_by(student_id=student_id).order_by(Booking.booked_at.desc()).all()
+
+    if status_filter:
+        filtered_bookings = []
+        for b in all_bookings:
+            if b.status == status_filter:
+                filtered_bookings.append(b)
+    else:
+        filtered_bookings = all_bookings
+
+    return render_template(
+        'student/history.html',
+        student=student,
+        bookings=filtered_bookings,
+        status_filter=status_filter
+    )
+

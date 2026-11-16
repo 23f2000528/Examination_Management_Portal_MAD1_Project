@@ -9,8 +9,7 @@ from utils import role_required
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
-
-#Admin Dashboard
+#admin dashboard
 @admin_bp.route('/dashboard')
 @role_required('admin')
 def dashboard():
@@ -38,7 +37,7 @@ def dashboard():
         recent_bookings=recent_bookings
     )
 
-#Course Manage
+#course manage
 @admin_bp.route('/courses')
 @role_required('admin')
 def manage_courses():
@@ -117,7 +116,7 @@ def delete_course(course_id):
     flash(f'Course {code} and all associated exams/slots were deleted.', 'info')
     return redirect(url_for('admin.manage_courses'))
 
-#Exam Management 
+#exam manage
 @admin_bp.route('/examinations')
 @role_required('admin')
 def manage_examinations():
@@ -243,9 +242,7 @@ def delete_examination(exam_id):
     flash(f'Examination "{title}" deleted.', 'info')
     return redirect(url_for('admin.manage_examinations'))
 
-
-#EXAMINATION RUBRICS MANAGEMENT
-
+#exam rubric management
 @admin_bp.route('/examinations/<int:exam_id>/rubrics', methods=['GET', 'POST'])
 @role_required('admin')
 def manage_rubrics(exam_id):
@@ -288,9 +285,7 @@ def delete_rubric(rubric_id):
     flash(f'Rubric criterion "{rubric.criterion_name}" deleted.', 'info')
     return redirect(url_for('admin.manage_rubrics', exam_id=exam_id))
 
-
-#User and Examiner Managing
-
+#user and exam manage
 @admin_bp.route('/users')
 @role_required('admin')
 def manage_users():
@@ -398,7 +393,8 @@ def toggle_user_status(user_id):
     flash(f'User "{user.full_name}" has been {state}.', 'info')
     return redirect(url_for('admin.manage_users'))
 
-#Exam Slots
+
+#exam slots
 @admin_bp.route('/slots')
 @role_required('admin')
 def manage_slots():
@@ -443,7 +439,7 @@ def change_slot_examiner(slot_id):
     return redirect(url_for('admin.manage_slots'))
 
 
-#Booking and Rescheduling Part
+
 @admin_bp.route('/bookings')
 @role_required('admin')
 def manage_bookings():

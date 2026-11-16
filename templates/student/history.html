@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% block title %}My Examination & Booking History{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h3 class="fw-bold mb-0">My Examination & Booking History</h3>
+        <p class="text-muted small mb-0">Complete historical record of all your examination reservations, attendance, and evaluation outcomes.</p>
+    </div>
+    <a href="{{ url_for('student.dashboard') }}" class="btn btn-outline-secondary btn-sm">My Dashboard</a>
+</div>
+
+<div class="card mb-4 shadow-sm border-0 bg-light">
+    <div class="card-body py-2">
+        <form method="GET" action="{{ url_for('student.booking_history') }}" class="row g-2 align-items-center">
+            <div class="col-md-9">
+                <select name="status" class="form-select">
+                    <option value="">All Statuses (Booked, Completed, Cancelled)</option>
+                    <option value="Booked" {% if status_filter == 'Booked' %}selected{% endif %}>Booked (Upcoming Viva)</option>
+                    <option value="Completed" {% if status_filter == 'Completed' %}selected{% endif %}>Completed (Evaluated)</option>
+                    <option value="Cancelled" {% if status_filter == 'Cancelled' %}selected{% endif %}>Cancelled</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-primary w-100">Filter</button>
+                {% if status_filter %}
+                    <a href="{{ url_for('student.booking_history') }}" class="btn btn-outline-secondary">Reset</a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th>#</th>
+                    <th>Course & Examination</th>
+                    <th>Examiner</th>
+                    <th>Slot Date & Time</th>
+                    <th>Booking Status</th>
+                    <th>Marks Obtained</th>
+                    <th class="text-end">Scorecard / Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for booking in bookings %}
+                <tr>
+                    <td class="text-muted">{{ loop.index }}</td>
+                    <td>
+                        <div class="fw-bold">{{ booking.slot.examination.title }}</div>
+                        <span class="badge bg-secondary font-monospace">{{ booking.slot.examination.course.course_code }}</span>
+                    </td>
+                    <td>
+                        <div class="fw-semibold">{{ booking.slot.examiner.full_name }}</div>
+                        <small class="text-muted">{{ booking.slot.examiner.email }}</small>
+                    </td>
+                    <td>
+                        <div><strong>{{ booking.slot.slot_date.strftime('%d %B %Y') }}</strong></div>
+                        <small class="text-muted">{{ booking.slot.start_time.strftime('%H:%M') }} - {{ booking.slot.end_time.strftime('%H:%M') }}</small>
+                    </td>
+                    <td>
+                        {% if booking.status == 'Completed' %}
+                            <span class="badge bg-success">Completed</span>
+                        {% elif booking.status == 'Booked' %}
+                            <span class="badge bg-primary">Booked</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Cancelled</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if booking.status == 'Completed' and booking.total_marks_obtained is not none %}
+                            <strong class="text-success">{{ booking.total_marks_obtained }} / {{ booking.slot.examination.total_marks }}</strong>
+                        {% elif booking.status == 'Cancelled' %}
+                            <span class="text-muted">Cancelled</span>
+                        {% else %}
+                            <span class="text-muted">Pending viva</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">
+                        {% if booking.status == 'Completed' %}
+                            <a href="{{ url_for('student.view_result', booking_id=booking.id) }}" class="btn btn-sm btn-outline-success">
+                                View Scorecard
+                            </a>
+                        {% elif booking.status == 'Booked' %}
+                            <form method="POST" action="{{ url_for('student.cancel_booking', booking_id=booking.id) }}" class="d-inline" onsubmit="return confirm('Cancel this viva booking?');">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Cancel</button>
+                            </form>
+                        {% else %}
+                            <span class="text-muted small">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" class="text-center py-4 text-muted">
+                        No booking history found matching your filter criteria.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

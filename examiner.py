@@ -1,38 +1,35 @@
-from datetime import datetime, date, time
+from datetime import datetime
 from flask import Blueprint, render_template, redirect, url_for, flash, request, session
-from models import (
-    db, User, ExaminerProfile, Course, Examination,
-    ExaminationRubric, ExaminationSlot, Booking, EvaluationScore
-)
+from models import db, User, ExaminerProfile, Examination, ExaminationRubric, ExaminationSlot, Booking, EvaluationScore
 from utils import role_required
 
 examiner_bp = Blueprint('examiner', __name__, url_prefix='/examiner')
 
-#Examiner Dashboard
+
 @examiner_bp.route('/dashboard')
 @role_required('examiner')
 def dashboard():
     examiner_id = session['user_id']
-    examiner = User.query.get_or_404(examiner_id)
+    examiner = User.query.get(examiner_id)
 
-    #Exam open for slots 
     active_exams = Examination.query.filter(
         Examination.status.in_(['Slot Creation', 'Booking Open', 'Closed'])
     ).all()
 
-   #Examiner Slot creation
-    my_slots = ExaminationSlot.query.filter_by(examiner_id=examiner_id).order_by(
-        ExaminationSlot.slot_date.desc(), ExaminationSlot.start_time.asc()
-    ).all()
+    my_slots = ExaminationSlot.query.filter_by(examiner_id=examiner_id).all()
 
-    #Total students booked in this examiner's slots
-    all_bookings = []
-    for s in my_slots:
-        all_bookings.extend([b for b in s.bookings if b.status != 'Cancelled'])
+    total_booked = 0
+    pending_evaluations = 0
+    completed_evaluations = 0
 
-    total_booked = len(all_bookings)
-    pending_evaluations = len([b for b in all_bookings if b.status == 'Booked' and b.total_marks_obtained is None])
-    completed_evaluations = len([b for b in all_bookings if b.status == 'Completed'])
+    for slot in my_slots:
+        for booking in slot.bookings:
+            if booking.status != 'Cancelled':
+                total_booked = total_booked + 1
+                if booking.status == 'Booked':
+                    pending_evaluations = pending_evaluations + 1
+                elif booking.status == 'Completed':
+                    completed_evaluations = completed_evaluations + 1
 
     return render_template(
         'examiner/dashboard.html',
@@ -45,23 +42,22 @@ def dashboard():
     )
 
 
-#profile manage
 @examiner_bp.route('/profile', methods=['GET', 'POST'])
 @role_required('examiner')
 def profile():
     examiner_id = session['user_id']
-    user = User.query.get_or_404(examiner_id)
+    user = User.query.get(examiner_id)
 
-    #profile existing or not
     if not user.examiner_profile:
-        user.examiner_profile = ExaminerProfile(user_id=user.id)
+        new_profile = ExaminerProfile(user_id=user.id)
+        db.session.add(new_profile)
         db.session.commit()
 
     if request.method == 'POST':
-        user.full_name = request.form.get('full_name', '').strip()
-        user.examiner_profile.department = request.form.get('department', '').strip() or None
-        user.examiner_profile.qualification = request.form.get('qualification', '').strip() or None
-        user.examiner_profile.bio = request.form.get('bio', '').strip() or None
+        user.full_name = request.form.get('full_name')
+        user.examiner_profile.department = request.form.get('department')
+        user.examiner_profile.qualification = request.form.get('qualification')
+        user.examiner_profile.bio = request.form.get('bio')
 
         db.session.commit()
         session['user_name'] = user.full_name
@@ -70,66 +66,51 @@ def profile():
 
     return render_template('examiner/profile.html', user=user)
 
-#examiner slot creation
+
 @examiner_bp.route('/slots/create', methods=['GET', 'POST'])
 @role_required('examiner')
 def create_slot():
     examiner_id = session['user_id']
     now = datetime.utcnow()
 
-    available_exams = Examination.query.filter(
-        Examination.status.in_(['Slot Creation', 'Draft'])
-    ).all()
-
-    # Filter strictly according to timeline windows if defined
+    all_exams = Examination.query.all()
     eligible_exams = []
-    for exam in available_exams:
+
+    for exam in all_exams:
         if exam.status == 'Slot Creation':
-            start_ok = (exam.slot_creation_start is None) or (now >= exam.slot_creation_start)
-            end_ok = (exam.slot_creation_end is None) or (now <= exam.slot_creation_end)
-            if start_ok and end_ok:
-                eligible_exams.append(exam)
-        elif exam.status == 'Draft':
-            # Allow examiners to prepare if admin enabled slot creation start
             if exam.slot_creation_start and exam.slot_creation_end:
-                if exam.slot_creation_start <= now <= exam.slot_creation_end:
+                if exam.slot_creation_start <= now and now <= exam.slot_creation_end:
                     eligible_exams.append(exam)
+            else:
+                eligible_exams.append(exam)
 
     if request.method == 'POST':
-        exam_id = request.form.get('examination_id', type=int)
-        slot_date_str = request.form.get('slot_date')
-        start_time_str = request.form.get('start_time')
-        end_time_str = request.form.get('end_time')
-        capacity = request.form.get('capacity', type=int) or 1
+        examination_id = int(request.form.get('examination_id'))
+        slot_date_string = request.form.get('slot_date')
+        start_time_string = request.form.get('start_time')
+        end_time_string = request.form.get('end_time')
+        capacity = int(request.form.get('capacity', 1))
 
-        exam = Examination.query.get_or_404(exam_id)
+        exam = Examination.query.get(examination_id)
 
         if exam.slot_creation_start and now < exam.slot_creation_start:
-            flash(f'Slot creation has not started yet for "{exam.title}". Opens on {exam.slot_creation_start.strftime("%d %b %Y, %H:%M")}.', 'danger')
+            flash('Slot creation has not started yet for this exam.', 'danger')
             return redirect(url_for('examiner.create_slot'))
 
         if exam.slot_creation_end and now > exam.slot_creation_end:
-            flash(f'Slot creation window for "{exam.title}" closed on {exam.slot_creation_end.strftime("%d %b %Y, %H:%M")}.', 'danger')
+            flash('Slot creation period is over for this exam.', 'danger')
             return redirect(url_for('examiner.create_slot'))
 
-        try:
-            slot_date = datetime.strptime(slot_date_str, '%Y-%m-%d').date()
-            start_time = datetime.strptime(start_time_str, '%H:%M').time()
-            end_time = datetime.strptime(end_time_str, '%H:%M').time()
-        except (ValueError, TypeError):
-            flash('Invalid date or time format provided.', 'danger')
-            return render_template('examiner/create_slot.html', eligible_exams=eligible_exams)
+        slot_date = datetime.strptime(slot_date_string, '%Y-%m-%d').date()
+        start_time = datetime.strptime(start_time_string, '%H:%M').time()
+        end_time = datetime.strptime(end_time_string, '%H:%M').time()
 
         if start_time >= end_time:
-            flash('Slot start time must be earlier than end time.', 'danger')
-            return render_template('examiner/create_slot.html', eligible_exams=eligible_exams)
-
-        if capacity < 1:
-            flash('Slot capacity must be at least 1 student.', 'danger')
+            flash('Start time must be before end time.', 'danger')
             return render_template('examiner/create_slot.html', eligible_exams=eligible_exams)
 
         new_slot = ExaminationSlot(
-            examination_id=exam.id,
+            examination_id=examination_id,
             examiner_id=examiner_id,
             slot_date=slot_date,
             start_time=start_time,
@@ -140,48 +121,45 @@ def create_slot():
         db.session.add(new_slot)
         db.session.commit()
 
-        flash(f'Examination slot on {slot_date.strftime("%d %b %Y")} ({start_time_str} - {end_time_str}) created successfully!', 'success')
+        flash('Slot created successfully!', 'success')
         return redirect(url_for('examiner.dashboard'))
 
     return render_template('examiner/create_slot.html', eligible_exams=eligible_exams)
 
-#exam slot editing
+
 @examiner_bp.route('/slots/<int:slot_id>/edit', methods=['GET', 'POST'])
 @role_required('examiner')
 def edit_slot(slot_id):
     examiner_id = session['user_id']
-    slot = ExaminationSlot.query.get_or_404(slot_id)
+    slot = ExaminationSlot.query.get(slot_id)
 
     if slot.examiner_id != examiner_id:
-        flash('Unauthorized: You can only edit slots created by you.', 'danger')
+        flash('You cannot edit slots created by other examiners.', 'danger')
         return redirect(url_for('examiner.dashboard'))
 
     if slot.booked_count() > 0:
-        flash('Cannot edit slot: Students have already booked this slot.', 'warning')
+        flash('Students have already booked this slot. You cannot edit it.', 'danger')
         return redirect(url_for('examiner.dashboard'))
 
     now = datetime.utcnow()
-    exam = slot.examination
-    if exam.booking_start and now >= exam.booking_start:
-        flash(f'Cannot edit slot: Student booking period has already commenced for {exam.title}.', 'danger')
+    if slot.examination.booking_start and now >= slot.examination.booking_start:
+        flash('Student booking has already started. You cannot edit this slot.', 'danger')
         return redirect(url_for('examiner.dashboard'))
 
     if request.method == 'POST':
-        slot_date_str = request.form.get('slot_date')
-        start_time_str = request.form.get('start_time')
-        end_time_str = request.form.get('end_time')
-        capacity = request.form.get('capacity', type=int) or 1
+        slot_date_string = request.form.get('slot_date')
+        start_time_string = request.form.get('start_time')
+        end_time_string = request.form.get('end_time')
+        capacity = int(request.form.get('capacity', 1))
 
-        try:
-            slot.slot_date = datetime.strptime(slot_date_str, '%Y-%m-%d').date()
-            slot.start_time = datetime.strptime(start_time_str, '%H:%M').time()
-            slot.end_time = datetime.strptime(end_time_str, '%H:%M').time()
-            slot.capacity = capacity
-            db.session.commit()
-            flash('Slot details updated successfully!', 'success')
-            return redirect(url_for('examiner.dashboard'))
-        except (ValueError, TypeError):
-            flash('Invalid date or time values.', 'danger')
+        slot.slot_date = datetime.strptime(slot_date_string, '%Y-%m-%d').date()
+        slot.start_time = datetime.strptime(start_time_string, '%H:%M').time()
+        slot.end_time = datetime.strptime(end_time_string, '%H:%M').time()
+        slot.capacity = capacity
+
+        db.session.commit()
+        flash('Slot updated successfully!', 'success')
+        return redirect(url_for('examiner.dashboard'))
 
     return render_template('examiner/edit_slot.html', slot=slot)
 
@@ -190,39 +168,42 @@ def edit_slot(slot_id):
 @role_required('examiner')
 def delete_slot(slot_id):
     examiner_id = session['user_id']
-    slot = ExaminationSlot.query.get_or_404(slot_id)
+    slot = ExaminationSlot.query.get(slot_id)
 
     if slot.examiner_id != examiner_id:
-        flash('Unauthorized: You can only delete your own slots.', 'danger')
+        flash('You cannot delete slots created by other examiners.', 'danger')
         return redirect(url_for('examiner.dashboard'))
 
     if slot.booked_count() > 0:
-        flash('Cannot delete slot: Students are already booked for this session.', 'danger')
+        flash('Students have already booked this slot. You cannot delete it.', 'danger')
         return redirect(url_for('examiner.dashboard'))
 
     now = datetime.utcnow()
     if slot.examination.booking_start and now >= slot.examination.booking_start:
-        flash('Cannot delete slot: Student booking period is already active.', 'danger')
+        flash('Student booking has started. You cannot delete this slot.', 'danger')
         return redirect(url_for('examiner.dashboard'))
 
     db.session.delete(slot)
     db.session.commit()
-    flash('Examination slot removed successfully.', 'info')
+    flash('Slot deleted successfully!', 'info')
     return redirect(url_for('examiner.dashboard'))
 
-#view booked candidates and evaluation 
+
 @examiner_bp.route('/slots/<int:slot_id>/students')
 @role_required('examiner')
 def view_slot_students(slot_id):
     examiner_id = session['user_id']
-    slot = ExaminationSlot.query.get_or_404(slot_id)
+    slot = ExaminationSlot.query.get(slot_id)
 
-    #authoritization check
     if slot.examiner_id != examiner_id:
-        flash('Unauthorized: You can only view candidates booked into your own slots.', 'danger')
+        flash('You can only view students booked in your own slots.', 'danger')
         return redirect(url_for('examiner.dashboard'))
 
-    active_bookings = [b for b in slot.bookings if b.status != 'Cancelled']
+    active_bookings = []
+    for booking in slot.bookings:
+        if booking.status != 'Cancelled':
+            active_bookings.append(booking)
+
     return render_template('examiner/slot_students.html', slot=slot, bookings=active_bookings)
 
 
@@ -230,56 +211,54 @@ def view_slot_students(slot_id):
 @role_required('examiner')
 def evaluate_student(booking_id):
     examiner_id = session['user_id']
-    booking = Booking.query.get_or_404(booking_id)
+    booking = Booking.query.get(booking_id)
 
-    #examiner authorize check
     if booking.slot.examiner_id != examiner_id:
-        flash('Unauthorized: You are not authorized to evaluate this candidate.', 'danger')
+        flash('You are not authorized to evaluate this student.', 'danger')
         return redirect(url_for('examiner.dashboard'))
 
     exam = booking.slot.examination
     rubrics = exam.rubrics
 
-    if not rubrics:
-        flash('No rubrics defined for this examination yet. Contact Admin to set up rubrics.', 'warning')
-
     if request.method == 'POST':
         total_score = 0
-        remarks = request.form.get('remarks', '').strip()
+        remarks = request.form.get('remarks')
 
-        #clear partial score
-        EvaluationScore.query.filter_by(booking_id=booking.id).delete()
+        for score in booking.evaluation_scores:
+            db.session.delete(score)
+        db.session.commit()
 
-        #collect score per rubrics
         for rubric in rubrics:
-            field_name = f'rubric_{rubric.id}'
-            score_val = request.form.get(field_name, type=int) or 0
+            marks_input = request.form.get('rubric_' + str(rubric.id))
+            if marks_input:
+                marks_val = int(marks_input)
+            else:
+                marks_val = 0
 
-           #validate score within bound
-            if score_val < 0 or score_val > rubric.max_marks:
-                flash(f'Marks for "{rubric.criterion_name}" must be between 0 and {rubric.max_marks}.', 'danger')
-                return render_template('examiner/evaluate_student.html', booking=booking, rubrics=rubrics)
+            if marks_val < 0 or marks_val > rubric.max_marks:
+                flash('Marks must be between 0 and ' + str(rubric.max_marks), 'danger')
+                return render_template('examiner/evaluate_student.html', booking=booking, rubrics=rubrics, existing_scores={})
 
-            eval_score = EvaluationScore(
+            evaluation_score = EvaluationScore(
                 booking_id=booking.id,
                 rubric_id=rubric.id,
-                marks_awarded=score_val
+                marks_awarded=marks_val
             )
-            db.session.add(eval_score)
-            total_score += score_val
+            db.session.add(evaluation_score)
+            total_score = total_score + marks_val
 
-        #finialising booking record
         booking.total_marks_obtained = total_score
         booking.remarks = remarks
         booking.status = 'Completed'
         booking.evaluated_at = datetime.utcnow()
 
         db.session.commit()
-        flash(f'Evaluation submitted successfully for {booking.student.full_name}! Total Score: {total_score}/{exam.total_marks}', 'success')
+        flash('Evaluation saved successfully!', 'success')
         return redirect(url_for('examiner.view_slot_students', slot_id=booking.slot_id))
 
-    #existing record re evaluate
-    existing_scores = {es.rubric_id: es.marks_awarded for es in booking.evaluation_scores}
+    existing_scores = {}
+    for score in booking.evaluation_scores:
+        existing_scores[score.rubric_id] = score.marks_awarded
 
     return render_template(
         'examiner/evaluate_student.html',
@@ -287,3 +266,29 @@ def evaluate_student(booking_id):
         rubrics=rubrics,
         existing_scores=existing_scores
     )
+
+
+@examiner_bp.route('/evaluations')
+@role_required('examiner')
+def evaluation_history():
+    examiner_id = session['user_id']
+    examiner = User.query.get(examiner_id)
+
+    my_slots = ExaminationSlot.query.filter_by(examiner_id=examiner_id).all()
+    slot_ids = []
+    for s in my_slots:
+        slot_ids.append(s.id)
+
+    evaluated_bookings = []
+    if slot_ids:
+        all_bookings = Booking.query.filter_by(status='Completed').order_by(Booking.evaluated_at.desc()).all()
+        for b in all_bookings:
+            if b.slot_id in slot_ids:
+                evaluated_bookings.append(b)
+
+    return render_template(
+        'examiner/evaluations.html',
+        examiner=examiner,
+        bookings=evaluated_bookings
+    )
+
