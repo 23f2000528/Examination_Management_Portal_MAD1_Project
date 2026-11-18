@@ -420,6 +420,48 @@ def manage_slots():
         selected_examiner_id=examiner_id
     )
 
+@admin_bp.route('/users/<int:user_id>/edit', methods=['GET', 'POST'])
+@role_required('admin')
+def edit_user(user_id):
+    user = User.query.get_or_404(user_id)
+
+    # Admin apna khud ka account edit nahi kar sakta yahan se
+    if user.role == 'admin':
+        flash('Admin account cannot be edited from here.', 'danger')
+        return redirect(url_for('admin.manage_users'))
+
+    if request.method == 'POST':
+        full_name = request.form.get('full_name', '').strip()
+        email     = request.form.get('email', '').strip().lower()
+        username  = request.form.get('username', '').strip()
+
+        # Validation
+        if not all([full_name, email, username]):
+            flash('All fields are required.', 'danger')
+            return render_template('admin/edit_user.html', user=user)
+
+        # Check karo ki email already kisi aur ke paas toh nahi
+        existing_email = User.query.filter_by(email=email).first()
+        if existing_email and existing_email.id != user.id:
+            flash('This email is already used by another account.', 'danger')
+            return render_template('admin/edit_user.html', user=user)
+
+        # Check karo ki username already kisi aur ke paas toh nahi
+        existing_username = User.query.filter_by(username=username).first()
+        if existing_username and existing_username.id != user.id:
+            flash('This username is already taken.', 'danger')
+            return render_template('admin/edit_user.html', user=user)
+
+        # Sab theek hai — update karo
+        user.full_name = full_name
+        user.email     = email
+        user.username  = username
+        db.session.commit()
+
+        flash(f'User "{full_name}" updated successfully!', 'success')
+        return redirect(url_for('admin.manage_users'))
+
+    return render_template('admin/edit_user.html', user=user)
 
 @admin_bp.route('/slots/<int:slot_id>/change-examiner', methods=['POST'])
 @role_required('admin')

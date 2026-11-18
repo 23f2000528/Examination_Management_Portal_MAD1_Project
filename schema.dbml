@@ -1,0 +1,92 @@
+
+Table users {
+  id integer [primary key]
+  username varchar(50) [unique, not null]
+  email varchar(120) [unique, not null]
+  full_name varchar(100) [not null]
+  password_hash varchar(255) [not null]
+  role varchar(20) [not null, default: 'student', note: 'admin | examiner | student']
+  is_approved boolean [not null, default: false]
+  is_active boolean [not null, default: true]
+  created_at timestamp [default: `now()`]
+}
+
+Table examiner_profiles {
+  id integer [primary key]
+  user_id integer [unique, not null]
+  department varchar(100)
+  qualification varchar(100)
+  bio text
+}
+
+Table courses {
+  id integer [primary key]
+  course_code varchar(20) [unique, not null]
+  course_name varchar(150) [not null]
+  description text
+  created_at timestamp [default: `now()`]
+}
+
+Table examinations {
+  id integer [primary key]
+  course_id integer [not null]
+  title varchar(200) [not null]
+  description text
+  total_marks integer [not null, default: 100]
+  status varchar(30) [not null, default: 'Draft', note: 'Draft | Slot Creation | Booking Open | Closed | Completed']
+  slot_creation_start timestamp
+  slot_creation_end timestamp
+  booking_start timestamp
+  booking_end timestamp
+  exam_date timestamp
+  created_at timestamp [default: `now()`]
+}
+
+Table examination_rubrics {
+  id integer [primary key]
+  examination_id integer [not null]
+  criterion_name varchar(150) [not null]
+  max_marks integer [not null]
+  description text
+}
+
+Table examination_slots {
+  id integer [primary key]
+  examination_id integer [not null]
+  examiner_id integer [not null]
+  slot_date date [not null]
+  start_time time [not null]
+  end_time time [not null]
+  capacity integer [not null, default: 1]
+  is_closed boolean [not null, default: false]
+  created_at timestamp [default: `now()`]
+}
+
+Table bookings {
+  id integer [primary key]
+  student_id integer [not null]
+  slot_id integer [not null]
+  status varchar(20) [not null, default: 'Booked', note: 'Booked | Cancelled | Completed']
+  booked_at timestamp [default: `now()`]
+  total_marks_obtained integer
+  remarks text
+  evaluated_at timestamp
+}
+
+Table evaluation_scores {
+  id integer [primary key]
+  booking_id integer [not null]
+  rubric_id integer [not null]
+  marks_awarded integer [not null]
+}
+
+// Relationships & Foreign Keys
+Ref: users.id - examiner_profiles.user_id
+Ref: courses.id < examinations.course_id
+Ref: examinations.id < examination_rubrics.examination_id
+Ref: examinations.id < examination_slots.examination_id
+Ref: users.id < examination_slots.examiner_id
+Ref: users.id < bookings.student_id
+Ref: examination_slots.id < bookings.slot_id
+Ref: bookings.id < evaluation_scores.booking_id
+Ref: examination_rubrics.id < evaluation_scores.rubric_id
